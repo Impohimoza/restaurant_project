@@ -11,6 +11,11 @@ from .models import Camera, TableZone
 CAMERA_DEFAULT_WIDTH = 1920
 CAMERA_DEFAULT_HEIGHT = 1080
 
+VIDEO_W = 1080
+VIDEO_H = 720
+CAMERA_W = CAMERA_DEFAULT_WIDTH
+CAMERA_H = CAMERA_DEFAULT_HEIGHT
+
 
 def camera_list(request):
     cameras = Camera.objects.all()
@@ -75,19 +80,21 @@ def monitor_camera(request, camera_id):
     camera = get_object_or_404(Camera, id=camera_id)
     tables = TableZone.objects.filter(camera=camera)
 
+    # Масштаб относительно оригинального разрешения камеры
+    scale_x = VIDEO_W / CAMERA_W
+    scale_y = VIDEO_H / CAMERA_H
+
     tables_data = []
     for t in tables:
         tables_data.append({
             "name": t.name,
-            "camera_id": camera.id,
-            "neg_x1": -t.x1,
-            "neg_y1": -t.y1,
-            "camera_width": CAMERA_DEFAULT_WIDTH,
-            "camera_height": CAMERA_DEFAULT_HEIGHT,
+            "x1_scaled": int(t.x1 * scale_x),
+            "y1_scaled": int(t.y1 * scale_y),
+            "width_scaled": int((t.x2 - t.x1) * scale_x),
+            "height_scaled": int((t.y2 - t.y1) * scale_y),
         })
 
-    context = {
+    return render(request, "monitor.html", {
         "camera": camera,
-        "tables": tables_data
-    }
-    return render(request, "monitor.html", context)
+        "tables": tables_data,
+    })
