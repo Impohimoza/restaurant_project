@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование зон{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Редактирование зон: {{ camera.name }}</h1>
+
+<div class="relative w-full max-w-4xl border rounded">
+    <img id="frame" src="data:image/jpg;base64,{{ frame }}" class="w-full">
+    <canvas id="canvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+</div>
+
+<form id="saveForm" method="post" class="mt-4 p-4 bg-white rounded shadow max-w-2xl">
+    {% csrf_token %}
+    <label class="block mb-2">Название стола:</label>
+    <input type="text" name="name" required class="border p-2 w-full rounded mb-4">
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+            <label>X1:</label>
+            <input type="number" name="x1" class="border p-2 w-full rounded">
+        </div>
+        <div>
+            <label>Y1:</label>
+            <input type="number" name="y1" class="border p-2 w-full rounded">
+        </div>
+        <div>
+            <label>X2:</label>
+            <input type="number" name="x2" class="border p-2 w-full rounded">
+        </div>
+        <div>
+            <label>Y2:</label>
+            <input type="number" name="y2" class="border p-2 w-full rounded">
+        </div>
+    </div>
+
+    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Сохранить стол</button>
+</form>
+
+<script>
+const canvas = document.getElementById("canvas");
+const img = document.getElementById("frame");
+const ctx = canvas.getContext("2d");
+
+let clickCount = 0;
+let p1 = null, p2 = null;
+
+const x1Input = document.querySelector("[name=x1]");
+const y1Input = document.querySelector("[name=y1]");
+const x2Input = document.querySelector("[name=x2]");
+const y2Input = document.querySelector("[name=y2]");
+
+const tables = JSON.parse('{{ tables_json|escapejs }}');
+
+// Установим canvas в реальные размеры изображения
+function resizeCanvas() {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.style.width = img.clientWidth + "px";
+    canvas.style.height = img.clientHeight + "px";
+    drawAll();
+}
+
+img.onload = resizeCanvas;
+window.addEventListener("resize", resizeCanvas);
+
+function getMousePos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+        x: (evt.clientX - rect.left) * scaleX,
+        y: (evt.clientY - rect.top) * scaleY
+    };
+}
+
+function drawAll() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Существующие зоны
+    tables.forEach(t => {
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(t.x1, t.y1, t.x2 - t.x1, t.y2 - t.y1);
+
+        ctx.fillStyle = "red";
+        ctx.font = "18px Arial";
+        ctx.fillText(t.name, t.x1 + 5, t.y1 + 20);
+    });
+
+    // Новая зона
+    if(p1 && p2){
+        ctx.strokeStyle = "lime";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+    }
+}
+
+// Выделение по 2 кликам
+canvas.addEventListener("click", e => {
+    const pos = getMousePos(e);
+    clickCount++;
+    if(clickCount === 1){
+        p1 = {x: pos.x, y: pos.y};
+        p2 = null;
+    } else if(clickCount === 2){
+        p2 = {x: pos.x, y: pos.y};
+
+        x1Input.value = Math.round(p1.x);
+        y1Input.value = Math.round(p1.y);
+        x2Input.value = Math.round(p2.x);
+        y2Input.value = Math.round(p2.y);
+
+        clickCount = 0;
+    }
+    drawAll();
+});
+
+// Обновление координат вручную
+[x1Input, y1Input, x2Input, y2Input].forEach(input => {
+    input.addEventListener("input", () => {
+        const x1 = parseInt(x1Input.value);
+        const y1 = parseInt(y1Input.value);
+        const x2 = parseInt(x2Input.value);
+        const y2 = parseInt(y2Input.value);
+        if(!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2)){
+            p1 = {x: x1, y: y1};
+            p2 = {x: x2, y: y2};
+            drawAll();
+        }
+    });
+});
+</script>
+{% endblock %}
+
+
+
+

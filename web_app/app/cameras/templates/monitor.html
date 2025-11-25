@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Мониторинг столов{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Мониторинг столов: {{ camera.name }}</h1>
+
+<div class="flex gap-6">
+
+    <!-- Видео + зоны -->
+    <div class="relative bg-black rounded shadow"
+         style="width: 1080px; height: 720px; overflow: hidden;">
+
+        <img id="video"
+             src="{% url 'stream_camera' camera.id %}"
+             style="width: 100%; height: 100%; object-fit: contain;">
+
+        <!-- Контейнер для зон -->
+        <div id="zones-layer" class="absolute top-0 left-0 w-full h-full"></div>
+    </div>
+
+    <!-- Список столов -->
+    <div class="w-80">
+        <h2 class="text-xl font-bold mb-3">Столы</h2>
+        <div id="tables-list" class="flex flex-col gap-3 text-sm"></div>
+    </div>
+
+</div>
+
+<script>
+const cameraId = {{ camera.id }};
+const zonesLayer = document.getElementById("zones-layer");
+const tablesList = document.getElementById("tables-list");
+
+function statusColor(status) {
+    if (status === "free") return "green";
+    if (status === "open" || status === "served") return "yellow";
+    if (status === "closed") return "red";
+    return "gray";
+}
+
+async function loadData() {
+    const res = await fetch(`/api/monitor/${cameraId}/`);
+    const data = await res.json();
+
+    // --------------------------
+    // 1. Рисуем зоны поверх видео
+    // --------------------------
+    zonesLayer.innerHTML = "";
+
+    data.tables.forEach(t => {
+        let div = document.createElement("div");
+
+        div.style.position = "absolute";
+        div.style.left = t.x1 + "px";
+        div.style.top = t.y1 + "px";
+        div.style.width = t.width + "px";
+        div.style.height = t.height + "px";
+        div.style.border = `3px solid ${statusColor(t.status)}`;
+        div.style.background = `${statusColor(t.status)}33`; // прозрачный фон
+        div.style.pointerEvents = "none";
+
+        // подпись
+        div.innerHTML = `
+            <div style="
+                background: rgba(0,0,0,0.5);
+                color: white;
+                padding: 2px 4px;
+                font-size: 12px;">
+                ${t.name}
+            </div>
+        `;
+
+        zonesLayer.appendChild(div);
+    });
+
+    // --------------------------
+    // 2. Заполняем панель справа
+    // --------------------------
+    tablesList.innerHTML = "";
+
+    data.tables.forEach(t => {
+        let div = document.createElement("div");
+        div.className = "p-3 rounded shadow bg-gray-800 text-white";
+
+        div.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="text-lg font-bold">${t.name}</div>
+                <span class="px-2 py-1 rounded text-black"
+                      style="background:${statusColor(t.status)}">
+                      ${t.status}
+                </span>
+            </div>
+
+            ${t.arrival_time ? `<div>Приход: ${t.arrival_time}</div>` : ""}
+
+            ${t.wait_first ? `<div class="text-yellow-300">Ожидание официанта: ${t.wait_first} сек</div>` : ""}
+            ${t.wait_clean ? `<div class="text-red-300">Ожидание уборки: ${t.wait_clean} сек</div>` : ""}
+
+            ${t.bill_closed_time ? `<div>Счет закрыт: ${t.bill_closed_time}</div>` : ""}
+        `;
+
+        tablesList.appendChild(div);
+    });
+}
+
+// Автообновление 2 сек
+setInterval(loadData, 2000);
+loadData();
+</script>
+
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+

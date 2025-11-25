@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Restaurant Monitor{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind для быстрой стилизации -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            min-height: 100vh;
+        }
+        .grid-cell {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            background: #000;
+        }
+        .grid-cell img {
+            position: absolute;
+            object-fit: none;
+        }
+        .grid-cell h3 {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.9rem;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+
+    <!-- Навигация -->
+    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center flex-wrap">
+        <a href="{% url 'cameras' %}" class="font-bold text-lg">Restaurant Monitor</a>
+        <div class="space-x-4 mt-2 sm:mt-0">
+            <a href="{% url 'cameras' %}" class="hover:underline">Камеры</a>
+        </div>
+    </nav>
+
+    <!-- Контент -->
+    <main class="flex-1 p-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white p-4 text-center">
+        &copy; {{ year|default:2025 }} Restaurant Monitoring System
+    </footer>
+
+</body>
+</html>
