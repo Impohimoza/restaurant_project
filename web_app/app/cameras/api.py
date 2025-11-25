@@ -131,7 +131,7 @@ def record_departure(request, session_id=None):
         t = timezone.now()
         
     session.departure_time = t
-    if session.status == 'closed':
+    if session.status != 'closed':
         session.status = 'closed'
     session.save()
     

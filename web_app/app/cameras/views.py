@@ -3,9 +3,10 @@ import json
 
 import cv2
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, JsonResponse
+from django.utils import timezone
 
-from .models import Camera, TableZone
+from .models import Camera, TableZone, TableSession
 
 
 CAMERA_DEFAULT_WIDTH = 1080
@@ -75,13 +76,47 @@ def monitor_camera(request, camera_id):
     tables = TableZone.objects.filter(camera=camera)
 
     tables_data = []
+
     for t in tables:
+        # --- активная сессия стола ---
+        session = (
+            TableSession.objects
+            .filter(table=t, status__in=["open", "served", "closed"])
+            .order_by("-created_at")
+            .first()
+        )
+
+        status = session.status if session else "free"
+
+        # --- вычисления времени ---
+        now = timezone.now()
+
+        wait_first = None
+        wait_clean = None
+
+        if session:
+            # ожидает первичного подхода официанта
+            if session.status == "open" and not session.waiter_first_approach_time:
+                wait_first = (now - session.arrival_time).seconds
+
+            # ожидает уборку стола
+            if session.status == "closed" and not session.cleaning_time:
+                wait_clean = (now - session.departure_time).seconds if session.departure_time else None
+
         tables_data.append({
             "name": t.name,
+
+            # координаты
             "x1_scaled": int(t.x1),
             "y1_scaled": int(t.y1),
-            "width_scaled": int((t.x2 - t.x1)),
-            "height_scaled": int((t.y2 - t.y1)),
+            "width_scaled": int(t.x2 - t.x1),
+            "height_scaled": int(t.y2 - t.y1),
+
+            # данные сессии
+            "status": status,
+            "session": session,
+            "wait_first": wait_first,
+            "wait_clean": wait_clean,
         })
 
     return render(request, "monitor.html", {

@@ -19,14 +19,44 @@
 
     <!-- Зоны столов -->
     {% for t in tables %}
-    <div class="absolute border-2 border-red-500 bg-red-500/20 text-white text-xs px-1"
+    <div class="absolute border-2 border-green-400 bg-green-400/10 text-white text-xs p-1"
          style="
              left: {{ t.x1_scaled }}px;
              top: {{ t.y1_scaled }}px;
              width: {{ t.width_scaled }}px;
              height: {{ t.height_scaled }}px;
          ">
-        {{ t.name }}
+
+        <div class="font-bold">{{ t.name }}</div>
+
+        <!-- Статус -->
+        <div>Статус: <b>{{ t.status }}</b></div>
+
+        <!-- Ожидание первичного подхода -->
+        {% if t.wait_first %}
+            <div class="text-yellow-300">
+                Ожидает официанта: {{ t.wait_first }} сек
+            </div>
+        {% endif %}
+
+        <!-- Ожидание уборки -->
+        {% if t.wait_clean %}
+            <div class="text-red-300">
+                Ожидание уборки: {{ t.wait_clean }} сек
+            </div>
+        {% endif %}
+
+
+        {% if t.session %}
+        <div class="mt-1 opacity-70">
+            <div>Начало: {{ t.session.arrival_time|date:"H:i" }}</div>
+
+            {% if t.session.bill_closed_time %}
+                <div>Счет закрыт: {{ t.session.bill_closed_time|date:"H:i" }}</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
     </div>
     {% endfor %}
 </div>
