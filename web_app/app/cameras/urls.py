@@ -15,4 +15,5 @@ urlpatterns = [
     path('api/session/<int:session_id>/bill-info/', api.get_bill_info, name='api_bill_info'),
     path('api/session/<int:session_id>/departure/', api.record_departure, name='api_departure'),
     path('api/session/<int:session_id>/cleaning/', api.record_cleaning, name='api_cleaning'),
+    path('api/monitor/<int:camera_id>/', api.api_monitor_camera, name='api_monitor_camera'),
 ]

@@ -158,3 +158,55 @@ def record_cleaning(request, session_id=None):
     
     serializer = TableSessionSerializer(session)
     return Response(serializer.data)
+
+
+@api_view(["GET"])
+def api_monitor_camera(request, camera_id):
+    camera = get_object_or_404(Camera, id=camera_id)
+    tables = TableZone.objects.filter(camera=camera)
+
+    now = timezone.now()
+    data = []
+
+    for t in tables:
+        session = (
+            TableSession.objects
+            .filter(table=t, status__in=["open", "served", "closed"])
+            .order_by("-created_at")
+            .first()
+        )
+
+        status = session.status if session else "free"
+
+        wait_first = None
+        wait_clean = None
+
+        if session:
+            if session.status == "open" and not session.waiter_first_approach_time:
+                wait_first = (now - session.arrival_time).seconds
+
+            if session.status == "closed" and not session.cleaning_time:
+                wait_clean = (
+                    (now - session.departure_time).seconds
+                    if session.departure_time else None
+                )
+
+        data.append({
+            "id": t.id,
+            "name": t.name,
+
+            # координаты
+            "x1": t.x1,
+            "y1": t.y1,
+            "width": t.x2 - t.x1,
+            "height": t.y2 - t.y1,
+
+            # сессии
+            "status": status,
+            "arrival_time": session.arrival_time.strftime("%H:%M") if session else None,
+            "bill_closed_time": session.bill_closed_time.strftime("%H:%M") if session and session.bill_closed_time else None,
+            "wait_first": wait_first,
+            "wait_clean": wait_clean,
+        })
+
+    return Response({"tables": data})
