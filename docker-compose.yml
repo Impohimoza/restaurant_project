@@ -1,5 +1,25 @@
 services:
 
+  web:
+    build: 
+      context: ./web_app
+      dockerfile: Dockerfile
+    container_name: django_web
+    volumes:
+      - ./web_app/app:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    environment:
+      DATABASE: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: django_db
+      DB_USER: django_user
+      DB_PASSWORD: password
   db:
     image: postgres:15
     volumes:
