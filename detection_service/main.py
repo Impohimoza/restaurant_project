@@ -35,5 +35,7 @@ if __name__ == "__main__":
         stream.run()
     except KeyboardInterrupt:
         log.info(' Завершение по Ctrl+C')
+    except Exception as e:
+        log.error(e)
     finally:
         log.info('Система выключена')

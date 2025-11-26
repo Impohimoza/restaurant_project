@@ -34,7 +34,10 @@ class VideoStreamProcessor:
         grid = np.zeros((height * rows, width * cols, 3), dtype=np.uint8)
         
         for i, frame in enumerate(frames):
-            resize_frame = cv2.resize(frame, (width, height))
+            if frame is not None:
+                resize_frame = cv2.resize(frame, (width, height))
+            else:
+                resize_frame = np.zeros((height, width, 3), dtype=np.uint8)
             row = i // cols
             col = i % cols
             
@@ -54,7 +57,8 @@ class VideoStreamProcessor:
             for camera in self.cameras:
                 ret, frame = camera.cap.read()
                 if not ret:
-                    break
+                    raise Exception(
+                        f'Изображение на камере {camera.id} не доступно')
                 frames.append(frame)
             
             if self.monitor:
