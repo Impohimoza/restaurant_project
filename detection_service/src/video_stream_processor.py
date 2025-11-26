@@ -11,9 +11,9 @@ log.setLevel(logging.INFO)
 
 
 class VideoStreamProcessor:
-    def __init__(self, cameras_data: list[dict], debug: bool):
+    def __init__(self, cameras_data: list[dict], monitor: bool):
         self.cameras = self._initCameras(cameras_data)
-        self.debug = debug
+        self.monitor = monitor
     
     def _initCameras(self, cameras_data) -> list[Camera]:
         cameras_list = []
@@ -57,7 +57,7 @@ class VideoStreamProcessor:
                     break
                 frames.append(frame)
             
-            if self.debug:
+            if self.monitor:
                 self.show_monitor(frames, (320, 540))
             
             if cv2.waitKey(1) & 0xFF == ord("q"):

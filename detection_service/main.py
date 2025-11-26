@@ -16,8 +16,8 @@ if __name__ == "__main__":
     sys_argv = sys.argv[1:]
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--debug',
-        help="Run with DEBUG mode",
+        '--monitor',
+        help="Monitor video",
         action='store_true',
         default=False,
     )
@@ -31,7 +31,7 @@ if __name__ == "__main__":
         log.error(f'Ошибка ответа: {response.status_code}')
     
     try:
-        stream = VideoStreamProcessor(data, cli_args.debug)
+        stream = VideoStreamProcessor(data, cli_args.monitor)
         stream.run()
     except KeyboardInterrupt:
         log.info(' Завершение по Ctrl+C')
