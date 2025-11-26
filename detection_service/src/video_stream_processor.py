@@ -3,19 +3,32 @@ import math
 import cv2
 import numpy as np
 
-from .models.camera import Camera
 from .util.logconf import logging
+from .data.model import Camera, Status
+from .core.table_processor import TableProcessor
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+
+COLOR_DICT = {Status.Free: (0, 255, 0),
+              Status.Await: (0, 0, 255)}
 
 
 class VideoStreamProcessor:
     def __init__(self, cameras_data: list[dict], monitor: bool):
         self.cameras = self._initCameras(cameras_data)
+        self.processor = TableProcessor()
         self.monitor = monitor
     
-    def _initCameras(self, cameras_data) -> list[Camera]:
+    def _initCameras(self, cameras_data: dict) -> list[Camera]:
+        """Инициация камер
+
+        Args:
+            cameras_data (dict): Информация о камерах со столами
+
+        Returns:
+            list[Camera]: Список инициализированных камер
+        """
         cameras_list = []
         for camera in cameras_data:
             cameras_list.append(Camera(
@@ -27,6 +40,12 @@ class VideoStreamProcessor:
         return cameras_list
 
     def show_monitor(self, frames: list, dsize: tuple):
+        """Функция для мониторинга камер
+
+        Args:
+            frames (list): Кадры с камер
+            dsize (tuple): Resize размер
+        """
         cols = math.ceil(math.sqrt(len(frames)))
         rows = math.ceil(len(frames) / cols)
         height, width = dsize
@@ -48,8 +67,33 @@ class VideoStreamProcessor:
             grid[start_height:end_height, start_width:end_width] = resize_frame
         
         cv2.imshow('Camera Monitor', grid)
+    
+    def draw_bounding_boxes(self, frame: np.ndarray, camera: Camera):
+        """Отображение столов на камерах
+
+        Args:
+            frame (np.ndarray): кадр
+            camera (Camera): камера
+
+        Returns:
+            np.ndarray: кадр с помеченными столами
+        """
+        for table in camera.tables:
+            cv2.rectangle(
+                frame,
+                (table.bbox.x1, table.bbox.y1),
+                (table.bbox.x2, table.bbox.y2),
+                COLOR_DICT[table.status],
+                2
+            )
+        return frame
         
     def run(self):
+        """Запуск видеопотока
+
+        Raises:
+            Exception: Проверка на работу всех камер
+        """
         log.info('Запуск видеопотока ...')
         
         while True:
@@ -59,6 +103,8 @@ class VideoStreamProcessor:
                 if not ret:
                     raise Exception(
                         f'Изображение на камере {camera.id} не доступно')
+                self.processor.process_table(frame, camera)
+                frame = self.draw_bounding_boxes(frame, camera)
                 frames.append(frame)
             
             if self.monitor:
