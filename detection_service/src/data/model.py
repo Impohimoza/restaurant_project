@@ -10,8 +10,16 @@ Status = Enum('Status', [('Free', 0), ('Await', 1)])
 class Table:
     def __init__(self, table_id: int, x1: int, y1: int, x2: int, y2: int):
         self.id = table_id
+        self.people_at_the_table = dict()
         self.bbox = BboxCord(x1, y1, x2, y2)
         self.status = Status.Free
+    
+    def set_status_free(self):
+        self.status = Status.Free
+    
+    def set_status_await(self):
+        if self.status == Status.Free:
+            self.status = Status.Await
 
 
 class Camera:
