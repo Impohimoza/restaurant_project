@@ -1,4 +1,5 @@
 import math
+from time import time
 
 import cv2
 import numpy as np
@@ -39,7 +40,7 @@ class VideoStreamProcessor:
         
         return cameras_list
 
-    def show_monitor(self, frames: list, dsize: tuple):
+    def show_monitor(self, frames: list, fps: float, dsize: tuple):
         """Функция для мониторинга камер
 
         Args:
@@ -65,6 +66,15 @@ class VideoStreamProcessor:
             start_width = col * width
             end_width = (col + 1) * width
             grid[start_height:end_height, start_width:end_width] = resize_frame
+        
+        cv2.putText(
+            grid,
+            f'FPS: {int(fps)}',
+            (20, 70),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            (0, 255, 0),
+            2)
         
         cv2.imshow('Camera Monitor', grid)
     
@@ -96,7 +106,10 @@ class VideoStreamProcessor:
         """
         log.info('Запуск видеопотока ...')
         
+        fps_count = []
+        fps = 0
         while True:
+            start_time = time()
             frames = []
             for camera in self.cameras:
                 ret, frame = camera.cap.read()
@@ -107,8 +120,15 @@ class VideoStreamProcessor:
                 frame = self.draw_bounding_boxes(frame, camera)
                 frames.append(frame)
             
+            end_time = time()
+            fps_now = 1 / np.round(end_time - start_time, 2)
+            fps_count.append(fps_now)
+            if len(fps_count) == 30:
+                fps = np.mean(fps_count)
+                fps_count = []
+            
             if self.monitor:
-                self.show_monitor(frames, (320, 540))
+                self.show_monitor(frames, fps, (360, 540))
             
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break

@@ -1,5 +1,9 @@
 from .detector.detector import PersonDetector
 from ..data.model import Status, Camera
+from ..util.logconf import logging
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 
 class TableProcessor:
@@ -26,6 +30,7 @@ class TableProcessor:
         overlap_area = x_overlap * y_overlap
         
         person_area = (x2_2 - x1_2) * (y2_2 - y1_2)
+        print(person_area)
         
         return round(overlap_area / person_area, 2)
     
@@ -37,13 +42,14 @@ class TableProcessor:
             camera (Camera): камера
         """
         detection_result = self.detector.detect(camera_frame)
-        for table in camera.tables:
-            table_box = (table.bbox.x1,
-                         table.bbox.y1,
-                         table.bbox.x2,
-                         table.bbox.y2)
+        for tracked_person in detection_result:
+            person_box = tracked_person[0]
             
-            for person_box in detection_result:
+            for table in camera.tables:
+                table_box = (table.bbox.x1,
+                             table.bbox.y1,
+                             table.bbox.x2,
+                             table.bbox.y2)
                 overlap_percentage = self.get_overlap_percentage(table_box,
                                                                  person_box)
                 if overlap_percentage > 0.8:
