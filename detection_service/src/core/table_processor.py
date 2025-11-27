@@ -5,8 +5,11 @@ from .detector.detector import PersonDetector
 from ..data.model import Status, Camera, Table
 from ..util.logconf import logging
 
+from dotenv import load_dotenv
+
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
+load_dotenv()
 
 TABLE_TIME_FREE = int(os.getenv('TABLE_TIME_FREE'))
 
