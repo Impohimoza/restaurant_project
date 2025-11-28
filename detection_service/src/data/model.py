@@ -13,6 +13,7 @@ class Table:
         self.people_at_the_table = dict()
         self.bbox = BboxCord(x1, y1, x2, y2)
         self.status = Status.Free
+        self.session_id = None
     
     def set_status_free(self):
         self.status = Status.Free

@@ -1,6 +1,8 @@
 import math
 from time import time
 
+
+import asyncio
 import cv2
 import numpy as np
 
@@ -20,6 +22,7 @@ class VideoStreamProcessor:
         self.cameras = self._initCameras(cameras_data)
         self.processor = TableProcessor()
         self.monitor = monitor
+        self.is_running = False
     
     def _initCameras(self, cameras_data: dict) -> list[Camera]:
         """Инициация камер
@@ -98,7 +101,7 @@ class VideoStreamProcessor:
             )
         return frame
         
-    def run(self):
+    async def process_camera_frames(self):
         """Запуск видеопотока
 
         Raises:
@@ -108,7 +111,7 @@ class VideoStreamProcessor:
         
         fps_count = []
         fps = 0
-        while True:
+        while self.is_running:
             start_time = time()
             frames = []
             for camera in self.cameras:
@@ -116,6 +119,7 @@ class VideoStreamProcessor:
                 if not ret:
                     raise Exception(
                         f'Изображение на камере {camera.id} не доступно')
+                    continue
                 self.processor.process_table(frame, camera)
                 frame = self.draw_bounding_boxes(frame, camera)
                 frames.append(frame)
@@ -130,9 +134,32 @@ class VideoStreamProcessor:
             if self.monitor:
                 self.show_monitor(frames, fps, (360, 540))
             
+            await asyncio.sleep(0.001)
+            
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
         for camera in self.cameras:
             camera.cap.release()
         cv2.destroyAllWindows()
+        
+    async def start(self):
+        """Запускает обработку видео"""
+        log.info('Запуск видеопотока ...')
+        self.is_running = True
+        
+        try:
+            await self.process_camera_frames()
+        except Exception as e:
+            log.error(f"Error in video processing: {e}")
+        finally:
+            await self.stop()
+    
+    async def stop(self):
+        """Останавливает обработку"""
+        self.is_running = False
+        for camera in self.cameras:
+            camera.cap.release()
+        cv2.destroyAllWindows()
+        
+        log.info("Video stream processor stopped")
