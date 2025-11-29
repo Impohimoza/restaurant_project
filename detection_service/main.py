@@ -66,7 +66,7 @@ class Application:
 async def main(cli_args):
     
     try:
-        response = requests.get(os.getenv("API_URL") + 'cameras-with-zones/')
+        response = requests.get(os.getenv("WEB_API_URL") + 'cameras-with-zones/')
         data = response.json()
         log.info(f'Получено камер: {len(data)}')
     except Exception:
