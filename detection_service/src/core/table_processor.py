@@ -47,6 +47,28 @@ class TableProcessor:
         
         return round(overlap_area / person_area, 2)
     
+    def person_at_the_table(self, table: Table, persons: list):
+        if table.id not in self._table_locks:
+            self._table_locks[table.id] = asyncio.Lock()
+            
+        table_box = (table.bbox.x1,
+                     table.bbox.y1,
+                     table.bbox.x2,
+                     table.bbox.y2)
+        person_at_table = set()
+        for person in persons:
+            person_box = person[0]
+            overlap_percentage = self.get_overlap_percentage(table_box,
+                                                             person_box)
+            if overlap_percentage > 0.7:
+                person_at_table.add(person[1])
+                table.people_at_the_table[person[1]] = \
+                    table.people_at_the_table.get(person[1], time.time())
+        
+        table.people_at_the_table = \
+            {k: v for k, v in table.people_at_the_table.items()
+             if (k in person_at_table) or (time.time() - v < 10)}
+    
     def work_with_free_table(self, tables: list[Table], persons: list):
         """Функция для работы со свободными столами
 
@@ -55,30 +77,10 @@ class TableProcessor:
             persons (list): Список людей на кадре
         """
         for table in tables:
-            if table.id not in self._table_locks:
-                self._table_locks[table.id] = asyncio.Lock()
-            
-            table_box = (table.bbox.x1,
-                         table.bbox.y1,
-                         table.bbox.x2,
-                         table.bbox.y2)
-            person_at_table = set()
-            for person in persons:
-                person_box = person[0]
-                overlap_percentage = self.get_overlap_percentage(table_box,
-                                                                 person_box)
-                if overlap_percentage > 0.7:
-                    person_at_table.add(person[1])
-                    table.people_at_the_table[person[1]] = \
-                        table.people_at_the_table.get(person[1], time.time())
-            
-            table.people_at_the_table = \
-                {k: v for k, v in table.people_at_the_table.items()
-                 if (k in person_at_table) or (time.time() - v < 10)}
+            self.person_at_the_table(table, persons)
             
             should_start_session = False
             for time_at_table in table.people_at_the_table.values():
-                print(time.time() - time_at_table)
                 if time.time() - time_at_table >= TABLE_TIME_FREE:
                     should_start_session = True
                     break  # Достаточно одного человека для смены статуса
@@ -88,6 +90,9 @@ class TableProcessor:
                     self._start_table_session(table)
                 )
             break
+    
+    # def work_with_await_table(self, tables: list[Table], persons: list):
+    #     pass
     
     async def _start_table_session(self, table: Table):
         """Асинхронная отправка запроса на начало сессии стола
@@ -101,7 +106,6 @@ class TableProcessor:
         try:
             async with self._table_locks[table.id]:
                 if table.status == Status.Free:
-                    print(1)
                     task = asyncio.create_task(
                         api_client.start_table_session(table=table)
                     )
@@ -131,8 +135,12 @@ class TableProcessor:
         detection_result = self.detector.detect(camera_frame)
         
         free_table = []
+        await_table = []
         for table in camera.tables:
             if table.status == Status.Free:
                 free_table.append(table)
+            elif table.status == Status.Await:
+                await_table.append(table)
         
         self.work_with_free_table(free_table, detection_result)
+        # self.work_with_await_table(free_table, detection_result)

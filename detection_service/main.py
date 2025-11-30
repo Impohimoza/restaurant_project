@@ -1,9 +1,9 @@
 import argparse
 import os
 import sys
+import signal
 
 import asyncio
-import signal
 import requests
 from dotenv import load_dotenv
 
@@ -90,4 +90,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Application terminated by user")
         sys.exit(1)
-        
