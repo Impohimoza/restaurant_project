@@ -10,13 +10,20 @@ RUN apt-get update && \
         libgl1 \
         libglib2.0-0 \
         netcat-openbsd \
-        && apt-get clean
+        dos2unix \
+        && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-COPY ./app /app
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY entrypoint.sh /tmp/entrypoint.sh
+RUN dos2unix /tmp/entrypoint.sh && \
+    chmod +x /tmp/entrypoint.sh && \
+    mv /tmp/entrypoint.sh /entrypoint.sh
+
+COPY . .
+
+RUN ls -la /entrypoint.sh && \
+    head -5 /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
