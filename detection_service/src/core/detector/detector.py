@@ -2,20 +2,23 @@ import os
 
 import numpy as np
 from ultralytics import YOLO
+from dotenv import load_dotenv
 # from deep_sort_realtime.deepsort_tracker import DeepSort
 
 # from .sort import Sort
 from .trackers.deep_sort import Tracker
 import cv2
 
+load_dotenv()
+
 
 class PersonDetector:
     def __init__(self,
-                 conf_thresh=0.5,
+                 conf_thresh=0.7,
                  max_age=50,
                  n_init=3,
                  max_cosine_distance=0.2):
-        self.model = YOLO(os.getenv('YOLO_DETECTOR_PATH'))
+        self.model = YOLO(model=os.getenv('YOLO_DETECTOR_PATH'))
         # self.tracker = DeepSort(
         #     max_age=max_age,
         #     n_init=n_init,

@@ -53,7 +53,7 @@ class Tracker:
         # Обновляем наши треки
         self.update_tracks(tracks, bbox)
 
-    def update_tracks(self, tracks, bbox):
+    def update_tracks(self, tracks, detections):
         """
         Обновление внутреннего списка треков
         
@@ -62,11 +62,13 @@ class Tracker:
         """
         updated_tracks = []
         
-        for track in tracks:
+        for i, track in enumerate(tracks):
             if not track.is_confirmed():
                 continue
                 
             track_id = track.track_id
+            
+            bbox = map(int, track.to_tlbr())
             
             updated_tracks.append(Track(track_id, bbox))
         

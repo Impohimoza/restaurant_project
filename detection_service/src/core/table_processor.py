@@ -3,9 +3,10 @@ import os
 
 import asyncio
 from dotenv import load_dotenv
+import numpy as np
 
 from .detector.detector import PersonDetector
-from ..data.model import Status, Camera, Table
+from ..data.model import Status, Camera, Table, Person
 from ..util.logconf import logging
 from ..api.async_client import api_client
 
@@ -20,6 +21,7 @@ TABLE_TIME_FREE = int(os.getenv('TABLE_TIME_FREE'))
 class TableProcessor:
     def __init__(self):
         self.detector = PersonDetector(conf_thresh=0.75)
+        self.person_in_frame = dict()
         self._pending_requests = set()
         self._table_locks = {}
         self._active_sessions = set()
@@ -48,8 +50,12 @@ class TableProcessor:
         return round(overlap_area / person_area, 2)
     
     def person_at_the_table(self, table: Table, persons: list):
-        if table.id not in self._table_locks:
-            self._table_locks[table.id] = asyncio.Lock()
+        """ Получение людей у стола
+
+        Args:
+            table (Table): Стол
+            persons (list): Список людей на кадре
+        """
             
         table_box = (table.bbox.x1,
                      table.bbox.y1,
@@ -57,6 +63,11 @@ class TableProcessor:
                      table.bbox.y2)
         person_at_table = set()
         for person in persons:
+            if person[1] not in self.person_in_frame:
+                continue
+            is_waiter = self.person_in_frame[person[1]].waiter
+            if is_waiter is None or is_waiter:
+                continue
             person_box = person[0]
             overlap_percentage = self.get_overlap_percentage(table_box,
                                                              person_box)
@@ -77,6 +88,9 @@ class TableProcessor:
             persons (list): Список людей на кадре
         """
         for table in tables:
+            if table.id not in self._table_locks:
+                self._table_locks[table.id] = asyncio.Lock()
+            
             self.person_at_the_table(table, persons)
             
             should_start_session = False
@@ -89,7 +103,6 @@ class TableProcessor:
                 asyncio.create_task(
                     self._start_table_session(table)
                 )
-            break
     
     # def work_with_await_table(self, tables: list[Table], persons: list):
     #     pass
@@ -124,6 +137,31 @@ class TableProcessor:
             log.error(f"Error starting session for table {table_id}: {e}")
         finally:
             self._pending_requests.discard(task)
+    
+    async def classify_person(self, frame: np.ndarray, person_list: list):
+        """Асинхронная классификация людей в кадре
+
+        Args:
+            frame (np.ndarray): кадр
+            person_list (list): Люди на кадре
+        """
+        for person in person_list:
+            if person[1] not in self.person_in_frame:
+                new_person = Person()
+                self.person_in_frame[person[1]] = new_person
+                x1, y1, x2, y2 = person[0]
+                crop = frame[y1:y2, x1:x2]
+                try:
+                    task = asyncio.create_task(api_client.classify_person(crop))
+                    try:
+                        person_class = await task
+                        
+                        new_person.waiter = bool(person_class)
+                        print(new_person.waiter)
+                    except Exception as e:
+                        log.error(f"Error classify person {e}")
+                except Exception as e:
+                    log.error(f"Error classify person {e}")
 
     def process_table(self, camera_frame, camera: Camera):
         """Обработка кадра
@@ -133,6 +171,9 @@ class TableProcessor:
             camera (Camera): камера
         """
         detection_result = self.detector.detect(camera_frame)
+        
+        asyncio.create_task(self.classify_person(camera_frame,
+                                                 detection_result))
         
         free_table = []
         await_table = []

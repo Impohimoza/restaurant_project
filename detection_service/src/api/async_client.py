@@ -1,6 +1,7 @@
 from typing import Optional
 import os
 import base64
+import  random
 
 import aiohttp
 import asyncio
@@ -82,6 +83,29 @@ class AsyncApiClient:
         except Exception as e:
             logger.error(f"API request failed for table: {str(e)}")
             return 'dirty'
+    
+    async def classify_person(self, img: np.ndarray) -> bool:
+        try:
+            _, buffer = cv2.imencode('.jpg', img)
+            image_bytes = buffer.tobytes()
+            
+            form_data = aiohttp.FormData()
+            form_data.add_field(
+                'image',
+                image_bytes,
+                filename='image.jpg',
+                content_type='image/jpeg'
+            )
+            # Запрос на классификацию
+            await asyncio.sleep(2)  # Имитация работы
+            return random.randint(0, 1)
+            
+        except asyncio.TimeoutError:
+            logger.error("API request timeout for table")
+            return 1
+        except Exception as e:
+            logger.error(f"API request failed for table: {str(e)}")
+            return 1
 
 
 api_client = AsyncApiClient(os.getenv('WEB_API_URL'),

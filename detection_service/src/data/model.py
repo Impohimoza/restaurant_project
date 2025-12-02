@@ -2,7 +2,6 @@ from collections import namedtuple
 from enum import Enum
 
 import cv2
-
 BboxCord = namedtuple('BboxCord', 'x1, y1, x2, y2')
 Status = Enum('Status', [('Free', 0), ('Await', 1)])
 
@@ -41,3 +40,9 @@ class Camera:
                 zone['y2'],
             ))
         return tables_list
+
+
+class Person:
+    def __init__(self):
+        self.waiter = None
+        self.missing_frame = 0
